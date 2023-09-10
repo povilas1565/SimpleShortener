@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<h1 id="simple-shortener">Simple Shortener</h1>
+<p><img src="https://img.shields.io/badge/built%20with-Cookiecutter%20Django-ff69b4.svg?logo=cookiecutter%0A%20%20:target:%20https://github.com/pydanny/cookiecutter-django/%0A%20%20:alt:%20Built%20with%20Cookiecutter%20Django"
+        alt="image"></p>
+<p>Работает на Python 3.9.x и Django 3.1.13.</p>
+<h2 id="-">Цели проекта</h2>
+<p>Данный проект выполнялся в рамках тестового задания.
+    Формулировка задания:</p>
+<p><em>Наша компания отправляет СМС с трекинговой ссылкой, но ссылка достаточно длинная и из-за этого СМС выходит за 70
+        символов (длина 1 СМС).Необходимо спроектировать сервис-укорачиватель ссылок, чтобы сэкономить деньги
+        компании.</em></p>
+<h2 id="-">Результаты</h2>
+<p>Приложение развернуто на проде (<a href="https://alena-kono.space">https://alena-kono.space</a>)</p>
+<p>Получить короткую ссылку:</p>
+<pre><code>    $ <span class="hljs-meta">GET</span> https://alena-kono<span class="hljs-meta">.space</span>/shorturl?originalUrl<span class="hljs-symbol">=example</span>.com
+</code></pre>
+<p>Примеры ответов:</p>
+<p>200</p>
+<pre><code>    $   {
+            <span class="hljs-string">"status"</span>: <span class="hljs-string">"success"</span>,
+            <span class="hljs-string">"data"</span>: [
+                {
+                    <span class="hljs-string">"shortened_url"</span>: https:<span class="hljs-comment">//alena-kono.space/aAb,</span>
+                    <span class="hljs-string">"original_url"</span>: example<span class="hljs-selector-class">.com</span>,
+                },
+                    ],
+        }
+</code></pre>
+<p>400</p>
+<pre><code>    $   {
+            <span class="hljs-string">"errors"</span>: [
+                {
+                    <span class="hljs-string">"status"</span>: <span class="hljs-string">"error"</span>,
+                    <span class="hljs-string">"message"</span>: <span class="hljs-string">"Passed URL is not valid."</span>,
+                }
+                    ],
+        }
+</code></pre>
+<p>404</p>
+<pre><code>    $   {
+            <span class="hljs-string">"errors"</span>: [
+                {
+                    <span class="hljs-string">"status"</span>: <span class="hljs-string">"error"</span>,
+                    <span class="hljs-string">"message"</span>: <span class="hljs-string">"Requested URL is not found."</span>,
+                }
+                    ],
+        }
+</code></pre>
+<h2 id="-">Ключевые моменты разработки проекта</h2>
+<ol>
+    <li><strong>Структура приложения</strong>.</li>
+
+<p>Элементарный микросервис. Короткую ссылку можно получить GET запросом из другого сервиса.</p>
+    <li><strong>Основной инструмент</strong></li>
+
+<p>Фреймворк Django 3.</p>
+<p>Django выбран в качестве рабочего фреймворка в целях демонстрации потенциальному работодателю своих навыков
+    разработки на Django.
+    Под указанную структуру приложения лучше подошли бы минималистичные Flask или FastAPI.</p>
+    <li><strong>Структура данных и хранилище</strong>.</li>
+
+<p>Выбрана реляционная СУБД (конкретно - PostgreSQL), так как предполагается, что структура данных будет однородна, а,
+    значит, схема данных может быть заранее определена и жестко зафиксирована.</p>
+<p>P.S При выбранном механизме укорачивания ссылок можно было бы обойтись без базы данных, просто формировав id и
+    сохраняя его в кэш, а затем генерируя из него строку для короткой ссылки.</p>
+    <li><strong>Механизм укорачивания ссылок</strong>.</li>
+
+<p>Рассматривалось 2 варианта.</p>
+<ul>
+    <li>1 вариант.</li>
+</ul>
+<p>Просто использовать хэширование длинной строки в короткую.</p>
+<p><em>Плюсы</em>: просто, ссылки непоследовательны, а значит, приватны.</p>
+<p><em>Минусы</em>: есть вероятность возникновения коллизий, в этом случае можно предварительно проверять существование
+    короткой ссылки в БД и генерировать новую, в случае существования. Однако при увеличении числа записей в БД,
+    вероятность коллизий будет увеличиваться, соответственно, увеличится общее время на проверку и создание новой
+    уникальной строки.</p>
+<ul>
+    <li>2 вариант.</li>
+</ul>
+<p>Использовать id ссылки, который формируется в БД, и конвертировать его в строку с определенной минимальной длиной.
+</p>
+<p><em>Плюсы</em>: для уникального id создается уникальная ссылка, не нужно дополнительно проверять в БД; в случае утери
+    данных БД, можно легко сгенерировать заново по созданному алгоритму; для получения длинной ссылки можно переводить
+    ссылку обратно в id БД и обращаться к нему, т.е индексы БД занимают меньше места.</p>
+<p><em>Минусы</em>: без соли ссылки не приватны, их можно конвертировать обратно в id, таким образом, получив доступ к
+    любой ссылке.
+    Выбран 2 вариант, т.к его использование не предусматривает возникновения коллизий в случае одинаковой соли для
+    каждой сгенерированной строки.</p>
+    <li><strong>Деплой.</strong></li>
+</ol>
+<p>Приложение разворачивается в контейнерах Docker.</p>
+<h2 id="-">Настройки проекта</h2>
+<p>Чтобы запустить проект локально и на продакшене, нужно чтобы были заполнены .env файлы с настройками Django и БД
+    Postgres.</p>
+<pre><code>$ cd <span class="hljs-selector-class">.envs</span>
+
+$ tree -<span class="hljs-selector-tag">a</span>
+
+  $ ├── <span class="hljs-selector-class">.local</span>
+  $ │   ├── <span class="hljs-selector-class">.django</span>
+  $ │   └── <span class="hljs-selector-class">.postgres</span>
+  $ └── <span class="hljs-selector-class">.production</span>
+  $     ├── <span class="hljs-selector-class">.django</span>
+  $     └── .postgres
+</code></pre>
+<h2 id="-">Запуск проекта локально (в среде разработки)</h2>
+<ol>
+    <li>
+        <p>Убедитесь,чтобы PostgreSQL, Docker, Docker-compose, Git были установлены на вашей машине.</p>
+    </li>
+    <li>
+        <p>В установленной и активированной среде окружения Python выполните:</p>
+        <pre><code>$ pip install -r requirements/<span class="hljs-keyword">local</span>.txt
+</code></pre>
+    </li>
+    <li>
+        <p>Выполните миграции Django:</p>
+        <pre><code>$ docker-compose -f local<span class="hljs-selector-class">.yml</span> run --rm django python manage<span class="hljs-selector-class">.py</span> migrate
+</code></pre>
+    </li>
+    <li>
+        <p>Разверните и запустите проект через docker-compose:</p>
+        <pre><code>$ docker-compose -f <span class="hljs-keyword">local</span>.yml up <span class="hljs-comment">--build -d</span>
+</code></pre>
+    </li>
+</ol>
+<h2 id="-">Запуск проекта на продакшене</h2>
+<ol>
+    <li>
+        <p>Убедитесь,чтобы PostgreSQL, Docker, Docker-compose, Git были установлены на вашей машине.</p>
+    </li>
+    <li>
+        <p>Перенесите на сервер файл с настройками .envs/.production</p>
+    </li>
+    <li>
+        <p>Выполните миграции Django:</p>
+        <pre><code>$ docker-compose -f production<span class="hljs-selector-class">.yml</span> run --rm django python manage<span class="hljs-selector-class">.py</span> migrate
+</code></pre>
+    </li>
+    <li>
+        <p>Разверните и запустите проект через docker-compose:</p>
+        <pre><code>$ docker-compose <span class="hljs-_">-f</span> production.yml up --build <span class="hljs-_">-d</span>
+</code></pre>
+    </li>
+</ol>
+
+{% endblock content %}
